@@ -23,6 +23,11 @@ removes them.
   under [its own privacy policy](https://stripe.com/privacy). Earshot itself never sees your card. Your license is
   checked again now and then so a cancelled subscription ends.
 
+- **GitHub, to check for updates.** About twice a day at most, Earshot asks GitHub for its latest release so it can
+  tell you about a new version and show the release notes; if you choose to download it, the file comes from
+  GitHub too. GitHub sees your IP address and that the request came from Earshot. Turn automatic checks off in
+  Settings or the update panel.
+
 Nothing else. Earshot sends no usage data, crash reports or identifiers anywhere.
 
 ## Your files

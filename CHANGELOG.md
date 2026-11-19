@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 (2026-11-19)
+
+- Update alerts: Earshot watches its GitHub releases and tells you when a new version is out, with the release
+  notes. Copies from Depot update through Depot (Luma's own updater); copies downloaded from GitHub download
+  the bundle for this device, check it against the release's checksums, and open it in the system installer,
+  which asks you to confirm. Turn automatic checks off in the update panel or Settings.
+
 ## 1.1.1 (2026-11-19)
 
 - Earshot Plus Lifetime accepts promotion codes, entered on Stripe's checkout page; the upgrade panel says

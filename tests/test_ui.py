@@ -20,6 +20,7 @@ os.environ["XDG_DATA_HOME"] = os.path.join(TMP, "data")
 os.environ["XDG_CACHE_HOME"] = os.path.join(TMP, "cache")
 os.environ["EARSHOT_AUDIO_SINK"] = "fakesink"
 os.environ["HS_BILLING_URL"] = "http://127.0.0.1:1"   # no store in tests: the panel must cope
+os.environ["HS_UPDATES_API"] = "http://127.0.0.1:1"   # never reach GitHub from tests
 
 import gi  # noqa: E402
 
@@ -242,8 +243,74 @@ def run(w):
         assert w.store.counts()["shows"] == 0 and w.current is None
 
     for name, fn in (("pages", pages), ("queue and playback", queue_and_play), ("speed and sleep", speed_and_sleep),
-                     ("show-note times", notes_links), ("menus and OPML", menus_and_opml), ("Earshot Plus", plus), ("unfollow", unfollow)):
+                     ("show-note times", notes_links), ("menus and OPML", menus_and_opml), ("Earshot Plus", plus), ("updates", lambda: updates_flow(w)), ("unfollow", unfollow)):
         check(name, fn)
+
+
+def _texts(widget):
+    """Every label's text under a widget (for asserting what a panel says)."""
+    from gi.repository import Gtk
+    out, stack = [], [widget]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Gtk.Label):
+            out.append(w.get_text())
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    return " | ".join(out)
+
+
+def _spin(seconds):
+    import time as _t
+    from gi.repository import GLib as _G
+    end = _t.monotonic() + seconds
+    while _t.monotonic() < end:
+        _G.MainContext.default().iteration(False)
+        _t.sleep(0.005)
+
+
+def _until(cond, seconds):
+    import time as _t
+    end = _t.monotonic() + seconds
+    while _t.monotonic() < end:
+        _spin(0.05)
+        if cond():
+            return True
+    return False
+
+
+def updates_flow(w):
+    """The update panel against a LOCAL FAKE GitHub: GitHub build downloads + verifies; Depot build doesn't."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import test_updates as tu
+    srv, _u = tu.setup("github")
+    try:
+        tu.STATE["tag"] = "v1.3.0"
+        w.updates.channel, w.updates.state = "github", {}
+        w.updater.release = None
+        w.updater.check(manual=True)
+        assert _until(lambda: w.center.grown == "updates", 15), "panel didn't open"
+        text = _texts(w.updater.box)
+        assert "1.3.0 is available" in text and "Faster" in text and "Download and install" in text, text
+        w.updater._download()
+        assert _until(lambda: bool(w.updater.downloaded), 20), (w.updater.error, w.updater.downloading)
+        assert open(w.updater.downloaded, "rb").read() == tu.BUNDLE
+        assert "Open the installer" in _texts(w.updater.box)
+        w.center.fold()
+        _spin(0.3)
+        # a Depot build: notes, but no GitHub download
+        w.updates.channel, w.updater.downloaded = "depot", ""
+        w.updater.open()
+        _spin(0.5)
+        text = _texts(w.updater.box)
+        assert "Depot" in text and "Download and install" not in text, text
+        w.updater._skip()
+        assert w.updates.skipped("1.3.0")
+        w.center.fold()
+    finally:
+        srv.shutdown()
 
 
 class TestApp(Adw.Application):
@@ -256,7 +323,7 @@ class TestApp(Adw.Application):
         from earshot import app as A
         self.window = A.Window(self)
         self.window.present()
-        pump(0.5)
+        _spin(0.5)
         try:
             run(self.window)
         finally:
