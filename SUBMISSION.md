@@ -37,22 +37,48 @@ They are attached, with `SHA256SUMS`, to the GitHub release
 
 ## Steps
 
-1. **Publish the source.** Create the public repository `github.com/chartmann1590/earshot` and push
-   `main` (the metainfo's links and screenshot URLs point there).
-2. **Pin the commit.** In `flatpak/com.charleshartmann.Earshot.json`, replace `COMMIT_PLACEHOLDER` with the full
-   40-character commit you want Luma to build (`git rev-parse HEAD`), commit that, and push. Luma rejects a git
-   source without a full commit.
-3. **Join the developer program** at https://hub.simplyluma.com/connect/developer.
-4. **Prove the namespace.** The app ID is `com.charleshartmann.Earshot`, so you prove you control
-   `charleshartmann.com` (Connect shows how). If you'd rather prove a GitHub account instead, the ID would
-   become `io.github.chartmann1590.Earshot` in every file; choose before the first submission,
-   because an app ID is permanent.
-5. **Submit the release** in Connect with the name `Earshot` and the ID `com.charleshartmann.Earshot`.
-   The listing (summary, description, screenshots, categories, licence, links, release notes, OARS rating) is
-   read from `data/com.charleshartmann.Earshot.metainfo.xml`. For the privacy policy, give the link to
-   `PRIVACY.md` in the repository.
-6. **Review.** Luma builds the manifest, validates the metainfo and desktop file, runs
-   `flatpak-builder-lint`, computes permissions, then a person reviews the first release.
+Done: the public repository, the pinned manifest commit (`8b049545…`), both 1.1.0 packages on the GitHub
+release, and the live Earshot Plus catalog. There is no Earshot draft in Connect yet; create one only when
+Charles asks, and only one:
+
+1. **New app** `com.charleshartmann.Earshot`, name `Earshot`, in the `com.charleshartmann` namespace (the same one as Hartmann Office).
+2. **Packages:** `com.charleshartmann.Earshot-1.1.0-x86_64.flatpak` and `com.charleshartmann.Earshot-1.1.0-aarch64.flatpak` (SHA-256 above), version `1.1.0`.
+3. **Listing** from `data/com.charleshartmann.Earshot.metainfo.xml` (it says the app is free with an optional Earshot Plus purchase);
+   privacy policy link: `PRIVACY.md` in the repository; in-app purchases: yes; sign-in: `none`; TV: supported.
+4. **Permissions** Depot will show: uses the internet, plays audio (listed as "Records audio": the only way a
+   Flatpak plays sound; no microphone is used), media controls name.
+5. **Screenshots:** `screenshots/` (computer, tablet, phone, TV).
+6. **Review.** Only Charles sends it for review.
+
+## 1.1.0 release check (2026-11-19)
+
+**Packages** (GitHub release [v1.1.0](https://github.com/chartmann1590/earshot/releases/tag/v1.1.0); built with
+`org.flatpak.Builder` from source commit `8b0495456eba80beb8eda5d739edc6ef562a6271`, the commit the manifest pins; runtime
+`org.projectluma.Platform//44`):
+
+| Architecture | File | SHA-256 |
+| --- | --- | --- |
+| x86_64 (computers, TVs) | `com.charleshartmann.Earshot-1.1.0-x86_64.flatpak` | `d1c4d4d4a3aa82957a6ff977d01ea187a52d0614f7a33ae44cc2939175c15e22` |
+| aarch64 (phones, tablets, ARM computers) | `com.charleshartmann.Earshot-1.1.0-aarch64.flatpak` | `704ec6175eb770e8d6ec8c8d7fa87cd1ced6303be0a5a264408c916c2947f7cc` |
+
+One package per architecture serves computer, tablet, phone and TV (LumaUI adapts by width, input and posture).
+Permissions: network, audio (`--socket=pulseaudio`), display, `org.mpris.MediaPlayer2.Earshot`. The same paid-feature, network and privacy disclosure applies on every device: free app,
+optional Earshot Plus through Stripe, email to the license server and Stripe only when buying or restoring.
+
+**What was verified, and where.** None of this ran on a real Luma phone, tablet or TV.
+
+| Check | Where it ran | Result |
+| --- | --- | --- |
+| UI tests (7), driving the real app | Luma SDK runtime, x86_64 (Proxmox build container) and aarch64 (Docker on Apple Silicon), virtual display | passed |
+| Bundle builds, installs, reports version 1.1.0 | same two environments | passed |
+| Packaged billing code reads the live catalog | both installed packages, both architectures, live server, read-only | exactly the three products: $1.99 a month; $14.99 a year, first 7 days free; $29.99 once |
+| Upgrade panel shows live prices; Buy creates a live Stripe Checkout session (`cs_live_…`); app waits; Cancel returns to the plans; nothing unlocks | x86_64, virtual display, live server; reserved test address, no browser, no card, no payment | passed |
+| Restore for an address that never bought | both packages, live server | "no purchase", nothing unlocked |
+| Purchase, restore and expiry logic against a server speaking the same `/v2` API | unit tests with a local fake server | passed |
+| Computer, tablet, phone and TV layouts | screenshots in the Luma runtime with Luma's device switches (TV posture forced, no Luma shell) | reviewed |
+| Real Luma device (phone, tablet, TV), sound, lock-screen controls, portals | not run | **not verified** |
+| Completed payment, trial enrollment, cancellation in Stripe's portal, restore of a real purchase | not run (no live charges; no test-mode server exists) | **not verified** |
+| `luma release-check` conformance evidence | not run in Luma's SDK test-image lanes | fails as expected; evidence file left honest |
 
 ## Billing (Earshot Plus)
 
@@ -67,8 +93,9 @@ lengths are read live from the license server, never hard-coded.
 **Sign-in declaration (2.4):** `none`. Buying asks for an email for the receipt and license; it does not create
 an account, and nothing in the app needs one.
 
-**What the license server needs before purchases work:** an app entry `earshot` in its catalog with three Stripe
-prices. Until then the panel says "Purchases aren't open for this app yet" and everything else works.
+**Live since 2026-11-19:** the license server's catalog lists `earshot` with the three approved Stripe prices
+(registered by the studio's billing maintainer; nothing in this repo creates prices). Public readback of
+`/v2/catalog?app=earshot`:
 
 | Product key | Label | Stripe mode | Price |
 | --- | --- | --- | --- |
@@ -76,7 +103,7 @@ prices. Until then the panel says "Purchases aren't open for this app yet" and e
 | `earshot_plus:yearly` | Earshot Plus (Yearly) | subscription | $14.99 / year, 7-day free trial |
 | `earshot_lifetime` | Earshot Plus (Lifetime) | payment | $29.99 once |
 
-The catalog entry, in the shape the server already serves for Nightsay (`GET /v2/catalog?app=nightsay`):
+The public catalog it serves:
 
 ```json
 {
