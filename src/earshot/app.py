@@ -29,6 +29,8 @@ from luma_appkit.action_bubble import FloatingMenu, MenuItem  # noqa: E402
 
 from . import net, notes, opml  # noqa: E402
 from .hsbilling import Billing  # noqa: E402
+from .hsupdates import Updates  # noqa: E402
+from .updates_ui import Updater  # noqa: E402
 from .paywall import Paywall, badge  # noqa: E402
 from .player import Player  # noqa: E402
 from .store import Store  # noqa: E402
@@ -39,7 +41,7 @@ from .widgets import (  # noqa: E402
 
 APP_ID = "com.charleshartmann.Earshot"
 APP_NAME = "Earshot"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 PLACES = (("fresh", "New episodes", "inbox"), ("queue", "Up next", "list-ordered"),
           ("downloads", "Downloads", "download"), ("shows", "Shows", "library"), ("discover", "Discover", "compass"))
 SAVE_EVERY = 10.0
@@ -104,6 +106,9 @@ class Window(AppWindow):
                 Command("play.boost", "Voice boost", lambda: self.set_voice_boost(not self.voice_boost_on()),
                         icon="volume-2"),
             )),
+            CommandGroup("App", (
+                Command("app.updates", "Check for updates…", lambda: self.updater.open(), icon="refresh-cw"),
+            )),
             CommandGroup(PLUS, (
                 Command("plus.open", f"{PLUS}…", self.open_plus, icon="sparkles"),
                 Command("plus.stats", "Listening stats", self.open_stats, icon="chart-column"),
@@ -165,6 +170,12 @@ class Window(AppWindow):
                                toast=lambda t, k="done": self.toast(t, k), changed=self._plus_changed)
         if self.billing.needs_revalidation():
             threading.Thread(target=self.billing.revalidate, daemon=True).start()
+        self.updates = Updates(APP_ID, "chartmann1590/earshot", VERSION, os.path.join(data_dir(), "updates.json"),
+                               os.path.join(GLib.get_user_cache_dir(), "earshot", "updates"))
+        self.updater = Updater(self, self.updates, APP_NAME, grow=lambda k, w: self.center.grow(k, w, wide=True),
+                               fold=lambda: self.center.fold(),
+                               toast=lambda t, k="done", action=None: self.toast(t, k, **({"action": action} if action else {})))
+        GLib.timeout_add_seconds(8, self.updater.start)
         self.mpris = None
         try:
             from .mpris import Mpris
@@ -512,7 +523,8 @@ class Window(AppWindow):
                 BarAction("download", "Export subscriptions…", on_activate=self.export_opml),
                 BarAction("moon", "Sleep timer…", on_activate=self.ask_sleep),
                 BarAction("chart-column", "Listening stats", on_activate=self.open_stats),
-                BarAction("sparkles", f"{PLUS}…", on_activate=self.open_plus)]
+                BarAction("sparkles", f"{PLUS}…", on_activate=self.open_plus),
+                BarAction("download", "Check for updates…", on_activate=lambda: self.updater.open())]
         head = self.mini if self.current is not None and view != "now" else None
         self.center.show_bar(items, more=more, head=head, fill=True, head_inset=False)
         self.search_item = next((i for i in items if isinstance(i, BarSearch)), None)
@@ -556,6 +568,10 @@ class Window(AppWindow):
         box.append(PanelRow("Remove downloads after playing", icon="trash-2",
                             toggle=bool(self.store.get("remove_played_downloads")),
                             on_toggle=lambda on: self.store.set("remove_played_downloads", on)))
+        box.append(PanelHeading("Updates"))
+        box.append(PanelRow(f"Check for {APP_NAME} updates automatically", icon="download", toggle=self.updates.automatic,
+                            on_toggle=self.updates.set_automatic))
+        box.append(PanelRow("Check now", icon="refresh-cw", detail=VERSION, on_activate=lambda: self.updater.check(manual=True)))
         box.append(PanelHeading("Refresh"))
         minutes = int(self.store.get("refresh_minutes") or 60)
         words = {0: "Only when I ask", 30: "Every 30 minutes", 60: "Every hour", 360: "Every 6 hours"}

@@ -71,6 +71,14 @@ It's a monthly or yearly subscription (the yearly one starts with a free week) o
 Stripe in your browser, with prices shown in the app. Cancel any time from the same panel. Earshot is open
 source: the Plus code is GPL too.
 
+### Updates
+
+The app watches its [GitHub releases](https://github.com/chartmann1590/earshot/releases) and tells you when a new version is out, with the release notes.
+Copies installed from **Depot** update through Depot (Luma's own updater; Update in the panel or App updates in the
+app menu). Copies installed from a **GitHub download** fetch the bundle for this device, check it against the
+release's `SHA256SUMS`, and open it in the system installer, which asks you to confirm; the app never installs
+anything itself. Automatic checks (at most twice a day) can be turned off.
+
 ## Keyboard
 
 | Keys | Does |

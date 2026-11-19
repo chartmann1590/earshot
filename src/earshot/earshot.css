@@ -32,3 +32,4 @@
 .hs-feature-icon { color: @luma_accent_link; margin-top: 2px; }
 .earshot-stat { background: alpha(@luma_ink, 0.05); border-radius: 14px; padding: 14px 16px; }
 .earshot-stat-value { font-size: 24px; font-weight: 750; letter-spacing: -0.02em; font-feature-settings: "tnum"; }
+.hs-release-notes { font-size: 13px; line-height: 1.5; }
