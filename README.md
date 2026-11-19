@@ -21,8 +21,25 @@ and a TV (it's on Luma's TV home, driven by the remote), and keeps playing with 
     <td width="50%"><img src="screenshots/now-playing.png" alt="Now playing with chapters and speed"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="screenshots/discover.png" alt="Discover shows in the charts"></td>
-    <td width="50%" align="center"><img src="screenshots/phone.png" alt="Earshot on a phone" height="330"></td>
+    <td colspan="2"><img src="screenshots/discover.png" alt="Discover shows in the charts"></td>
+  </tr>
+</table>
+
+### On every Luma device
+
+<table>
+  <tr>
+    <th>Tablet</th><th>Phone</th>
+  </tr>
+  <tr>
+    <td width="70%"><img src="screenshots/tablet.png" alt="Earshot on a tablet: a show's episodes"></td>
+    <td width="30%" align="center"><img src="screenshots/phone.png" alt="Earshot on a phone: Now playing" height="380"></td>
+  </tr>
+  <tr>
+    <th colspan="2">TV</th>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="screenshots/tv.png" alt="Earshot on a TV: New episodes"></td>
   </tr>
 </table>
 

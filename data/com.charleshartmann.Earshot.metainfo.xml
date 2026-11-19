@@ -65,8 +65,16 @@
       <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/discover.png</image>
     </screenshot>
     <screenshot>
-      <caption>The same app on a phone</caption>
+      <caption>On a tablet: a show and its episodes</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/tablet.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>On a phone: Now playing</caption>
       <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/phone.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>On a TV: New episodes from the couch</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/tv.png</image>
     </screenshot>
   </screenshots>
   <requires>

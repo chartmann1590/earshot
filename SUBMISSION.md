@@ -51,5 +51,5 @@ filesystem access. If review asks about the audio line, that is the answer.
 - **Category:** Media (Audio, Player)
 - **Licence:** GPL-3.0-or-later
 - **Content rating:** OARS 1.1, no objectionable content
-- **Screenshots:** `screenshots/new-episodes.png`, `now-playing.png`, `discover.png`, `phone.png`
+- **Screenshots:** `screenshots/new-episodes.png`, `now-playing.png`, `discover.png` (computer), `tablet.png`, `phone.png`, `tv.png`
 - **Third-party service:** search and charts use Apple's public podcast directory (said in the listing and `PRIVACY.md`)
