@@ -98,6 +98,20 @@ def run(w):
         assert w.trail.current.view == "episode"
         assert w.trail.back() and w.trail.current.view == "show"
         assert w.store.counts()["fresh"] == 3 and w.store.counts()["downloads"] == 3
+        # a row opens its episode from a focusable button (TV remote OK, Enter, screen readers)
+        from gi.repository import Gtk
+        from earshot.widgets import EpisodeRow
+        opened = []
+        row = EpisodeRow(w.store.episodes(url)[0], on_open=opened.append, on_play=lambda e: None)
+        child = row.get_first_child()
+        opener = None
+        while child is not None:
+            if isinstance(child, Gtk.Button) and child.has_css_class("earshot-row-open"):
+                opener = child
+            child = child.get_next_sibling()
+        assert opener is not None and opener.get_focusable() is not False
+        opener.emit("clicked")
+        assert opened and opened[0]["title"] == "Episode 2"
 
     def queue_and_play():
         e0, e1, e2 = (w.store.episode(eps[f"Episode {i}"]["id"]) for i in range(3))

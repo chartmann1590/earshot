@@ -12,8 +12,8 @@
 # Earshot
 
 **A podcast app made for [Luma](https://simplyluma.com).** Find shows in the charts or by searching, follow the
-ones you like, and their new episodes are waiting for you. Built with LumaUI, it fits a computer, a tablet and a
-phone, and keeps playing with the window closed.
+ones you like, and their new episodes are waiting for you. Built with LumaUI, it fits a computer, a tablet, a phone
+and a TV (it's on Luma's TV home, driven by the remote), and keeps playing with the window closed.
 
 <table>
   <tr>

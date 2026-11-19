@@ -24,7 +24,9 @@
         "install -Dm644 src/earshot/*.py src/earshot/*.css -t /app/share/com.charleshartmann.Earshot/earshot/",
         "install -Dm644 data/com.charleshartmann.Earshot.desktop /app/share/applications/com.charleshartmann.Earshot.desktop",
         "install -Dm644 data/com.charleshartmann.Earshot.metainfo.xml /app/share/metainfo/com.charleshartmann.Earshot.metainfo.xml",
-        "install -Dm644 data/com.charleshartmann.Earshot.svg /app/share/icons/hicolor/scalable/apps/com.charleshartmann.Earshot.svg"
+        "install -Dm644 data/com.charleshartmann.Earshot.svg /app/share/icons/hicolor/scalable/apps/com.charleshartmann.Earshot.svg",
+        "install -Dm644 data/com.charleshartmann.Earshot-tv.svg /app/share/icons/hicolor/scalable/apps/com.charleshartmann.Earshot-tv.svg",
+        "install -Dm644 data/com.charleshartmann.Earshot-tv.svg /app/share/luma-tv/com.charleshartmann.Earshot-tv.svg"
       ],
       "sources": [
         {

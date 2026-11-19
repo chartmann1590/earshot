@@ -371,19 +371,19 @@ class EpisodeRow(Gtk.Box):
             more = _icon_button("ellipsis", "More", lambda: on_more(ep, more))
             self.append(more)
         if on_open is not None:
-            click = Gtk.GestureClick()
-            click.connect("released", lambda g, n, x, y: self._clicked(g, x, y, on_open))
-            text.add_controller(click)
-            self.art.set_can_target(True)
+            # The words are one button (remote OK, Enter, a tap or a click opens the episode), so a TV remote,
+            # a keyboard and a screen reader reach it as easily as a finger does.
+            self.remove(text)
+            opener = Gtk.Button(child=text, hexpand=True)
+            opener.add_css_class("flat")
+            opener.add_css_class("earshot-row-open")
+            opener.update_property([Gtk.AccessibleProperty.LABEL], [f"Open {ep.get('title', '')}"])
+            opener.connect("clicked", lambda _b: on_open(ep))
+            self.insert_child_after(opener, self.art)
             art_click = Gtk.GestureClick()
             art_click.connect("released", lambda *_: on_open(ep))
             self.art.add_controller(art_click)
-            text.set_cursor(Gdk.Cursor.new_from_name("pointer"))
         self.update_property([Gtk.AccessibleProperty.LABEL], [f"{ep.get('title', '')}, {status_words(ep)}"])
-
-    def _clicked(self, gesture, x, y, on_open):
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        on_open(self.ep)
 
     def set_download(self, fraction: float):
         line = getattr(self, "download_line", None)

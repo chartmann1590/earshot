@@ -11,3 +11,6 @@ StartupNotify=true
 Categories=AudioVideo;Audio;Player;
 Keywords=podcast;podcasts;episode;show;listen;audio;rss;feed;opml;radio;
 X-Purism-FormFactor=Workstation;Mobile;
+X-Luma-TV=true
+X-Luma-TV-Tile=com.charleshartmann.Earshot-tv
+X-Luma-TV-Presentation=fullscreen

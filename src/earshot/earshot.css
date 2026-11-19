@@ -25,3 +25,4 @@
 .error { color: @luma_destructive_text; }
 .earshot-chapter-time { font-feature-settings: "tnum"; color: @luma_muted; font-size: 12px; }
 .earshot-link { padding: 2px 4px; min-height: 0; color: @luma_accent_link; font-weight: 600; }
+.earshot-row-open { padding: 4px 6px; min-height: 0; border-radius: 10px; font-weight: normal; }
