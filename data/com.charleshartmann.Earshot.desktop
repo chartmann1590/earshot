@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Earshot
+GenericName=Podcast Player
+Comment=Find, follow and listen to podcasts
+Exec=run-app
+Icon=com.charleshartmann.Earshot
+Terminal=false
+DBusActivatable=false
+StartupNotify=true
+Categories=AudioVideo;Audio;Player;
+Keywords=podcast;podcasts;episode;show;listen;audio;rss;feed;opml;radio;
+X-Purism-FormFactor=Workstation;Mobile;

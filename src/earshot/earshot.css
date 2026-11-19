@@ -1,0 +1,27 @@
+/* Earshot: only our own content, under our own prefix. Colours are LumaUI tokens. */
+.earshot-episode { padding: 12px 4px; }
+.earshot-episode.played .earshot-episode-title { color: @luma_muted; }
+.earshot-episode-title { font-weight: 600; font-size: 14px; }
+.earshot-sep { background: alpha(@luma_ink, 0.08); min-height: 1px; margin-left: 72px; }
+.earshot-play { min-width: 40px; min-height: 40px; }
+.earshot-tile { padding: 4px; border-radius: 14px; }
+.earshot-tile-title { font-weight: 600; font-size: 13px; margin-top: 2px; }
+.earshot-badge { background: @luma_count_attention_bg; color: @luma_count_attention_ink; border-radius: 999px; padding: 1px 7px;
+                 font-size: 11px; font-weight: 700; min-width: 12px; }
+.earshot-chip { border-radius: 999px; padding: 4px 12px; font-weight: 600; }
+.earshot-chip:checked { background: @luma_ink; color: @luma_island; }
+.earshot-show-title { font-size: 28px; font-weight: 750; letter-spacing: -0.02em; }
+.earshot-episode-heading { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.earshot-description, .earshot-notes { font-size: 14px; line-height: 1.55; }
+.earshot-notes link, .earshot-notes a { color: @luma_accent_link; }
+.earshot-now-title { font-size: 21px; font-weight: 700; letter-spacing: -0.015em; }
+.earshot-now-chapter { color: @luma_accent; font-weight: 650; font-size: 13px; }
+.earshot-chapters { background: transparent; }
+.earshot-chapters row { border-radius: 10px; }
+.earshot-chapters row.current { background: alpha(@luma_accent, 0.12); }
+.earshot-chapters row.current label { color: @luma_accent; font-weight: 650; }
+.earshot-scrub scale trough { min-height: 6px; border-radius: 999px; }
+.earshot-scrub scale mark indicator { min-height: 6px; min-width: 2px; color: alpha(@luma_ink, 0.35); }
+.error { color: @luma_destructive_text; }
+.earshot-chapter-time { font-feature-settings: "tnum"; color: @luma_muted; font-size: 12px; }
+.earshot-link { padding: 2px 4px; min-height: 0; color: @luma_accent_link; font-weight: 600; }

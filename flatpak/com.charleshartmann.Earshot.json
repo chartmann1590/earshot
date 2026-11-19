@@ -1,0 +1,38 @@
+{
+  "id": "com.charleshartmann.Earshot",
+  "runtime": "org.projectluma.Platform",
+  "runtime-version": "44",
+  "sdk": "org.projectluma.Sdk",
+  "command": "run-app",
+  "finish-args": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--own-name=org.mpris.MediaPlayer2.Earshot"
+  ],
+  "modules": [
+    {
+      "name": "earshot",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 run-app /app/bin/run-app",
+        "install -Dm644 src/main.py /app/share/com.charleshartmann.Earshot/main.py",
+        "install -d /app/share/com.charleshartmann.Earshot/earshot",
+        "install -Dm644 src/earshot/*.py src/earshot/*.css -t /app/share/com.charleshartmann.Earshot/earshot/",
+        "install -Dm644 data/com.charleshartmann.Earshot.desktop /app/share/applications/com.charleshartmann.Earshot.desktop",
+        "install -Dm644 data/com.charleshartmann.Earshot.metainfo.xml /app/share/metainfo/com.charleshartmann.Earshot.metainfo.xml",
+        "install -Dm644 data/com.charleshartmann.Earshot.svg /app/share/icons/hicolor/scalable/apps/com.charleshartmann.Earshot.svg"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/chartmann1590/earshot.git",
+          "commit": "COMMIT_PLACEHOLDER"
+        }
+      ]
+    }
+  ]
+}

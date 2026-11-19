@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.charleshartmann.Earshot</id>
+  <name>Earshot</name>
+  <summary>Find, follow and listen to podcasts</summary>
+  <description>
+    <p>
+      Earshot is a podcast app made for Luma. Find shows in the charts or by searching, follow the ones you
+      like, and their new episodes are waiting for you. It fits a computer, a tablet and a phone, and keeps
+      playing with the window closed.
+    </p>
+    <ul>
+      <li>Discover: charts for 15 categories, and search across the whole podcast directory</li>
+      <li>New episodes from every show you follow in one place, and Keep listening for what you started</li>
+      <li>Up next: line up what to play, and it plays through on its own</li>
+      <li>Speed from 0.8× to 3× without chipmunk voices, remembered for each show</li>
+      <li>Chapters, and times in the show notes you can tap to jump straight there</li>
+      <li>A sleep timer that fades out gently, or stops at the end of the episode or chapter</li>
+      <li>Download episodes to listen without a connection; finished downloads clean themselves up</li>
+      <li>Media keys, headphone buttons and the lock screen control playback</li>
+      <li>Bring your shows from any other podcast app with OPML, and take them anywhere</li>
+    </ul>
+    <p>
+      There is no account and no tracking. Earshot talks only to the shows you follow and, when you search or
+      browse the charts, to the Apple Podcasts directory.
+    </p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="com.charleshartmann">
+    <name>Hartmann Studios</name>
+  </developer>
+  <url type="homepage">https://github.com/chartmann1590/earshot</url>
+  <url type="help">https://github.com/chartmann1590/earshot#readme</url>
+  <url type="bugtracker">https://github.com/chartmann1590/earshot/issues</url>
+  <url type="vcs-browser">https://github.com/chartmann1590/earshot</url>
+  <launchable type="desktop-id">com.charleshartmann.Earshot.desktop</launchable>
+  <provides>
+    <binary>run-app</binary>
+    <dbus type="user">org.mpris.MediaPlayer2.Earshot</dbus>
+  </provides>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>podcast</keyword>
+    <keyword>podcasts</keyword>
+    <keyword>episode</keyword>
+    <keyword>rss</keyword>
+    <keyword>opml</keyword>
+  </keywords>
+  <screenshots>
+    <screenshot type="default">
+      <caption>New episodes from the shows you follow</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/new-episodes.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Now playing, with chapters and speed</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/now-playing.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Discover shows in the charts</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/discover.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The same app on a phone</caption>
+      <image>https://raw.githubusercontent.com/chartmann1590/earshot/main/screenshots/phone.png</image>
+    </screenshot>
+  </screenshots>
+  <requires>
+    <display_length compare="ge">360</display_length>
+    <internet>first-run</internet>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <custom>
+    <value key="org.projectluma.ApplicationContract">0.2</value>
+  </custom>
+  <releases>
+    <release version="1.0.0" date="2026-11-19">
+      <description>
+        <p>The first release: discover, follow, Up next, downloads, chapters, speed, sleep timer and OPML.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>
