@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install pytest
-      - run: python -m pytest -v tests/test_core.py tests/test_billing.py
+      - run: python -m pytest -v tests/test_core.py tests/test_billing.py tests/test_promo.py
 
   metadata:
     name: Desktop file and manifest
