@@ -15,7 +15,7 @@ for the publisher (Hartmann Studios).
 | Build with `org.flatpak.Builder` 1.4.12 on `org.projectluma.Platform//44`, installed and run in its sandbox | passed |
 | Unit tests (feeds, library, OPML, show notes) and UI tests driving the real app in the Luma runtime (real playback through Up next, resume, speed, sleep timer, show-note times, unfollow) | 6 + 6 passed |
 | Installed Flatpak run in its own sandbox: live charts and artwork load, MPRIS answers on the session bus | passed |
-| `luma release-check` | **fails, as Luma says it will for every app today**: it needs real evidence on x86_64 *and* aarch64, and Luma isn't built for aarch64 yet. The evidence file is left honest (all false); never fill it in by hand. |
+| `luma release-check` | **fails until real conformance evidence exists**: it wants evidence from Luma's SDK test-image lanes on `x86_64` *and* `aarch64`, desktop and mobile. The tests above ran on both architectures, but not in those lanes, so the evidence file is left honest (all false); never fill it in by hand. |
 
 Permissions the app asks for: showing a window (`--share=ipc`, `--socket=wayland`, `--socket=fallback-x11`,
 `--device=dri`), **the internet** (`--share=network`, to fetch feeds and episodes), **audio**
@@ -23,6 +23,17 @@ Permissions the app asks for: showing a window (`--share=ipc`, `--socket=wayland
 never opens a microphone) and its own media-controls name (`--own-name=org.mpris.MediaPlayer2.Earshot`, which
 Luma counts as nothing extra). Subscriptions files come and go through the file chooser portal; there is no
 filesystem access. If review asks about the audio line, that is the answer.
+
+## Packages
+
+Depot takes a package per architecture. Both are attached to the GitHub release
+[v1.0.0](https://github.com/chartmann1590/earshot/releases/tag/v1.0.0), built with the official Flatpak builder from the
+commit the manifest pins, installed and tested on each architecture:
+
+- `com.charleshartmann.Earshot-1.0.0-x86_64.flatpak`: computers
+- `com.charleshartmann.Earshot-1.0.0-aarch64.flatpak`: phones, tablets and ARM computers
+
+`SHA256SUMS` sits beside them. Upload both in Connect.
 
 ## Steps
 

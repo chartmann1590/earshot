@@ -6,7 +6,7 @@
   <a href="https://github.com/chartmann1590/earshot/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/chartmann1590/earshot/actions/workflows/tests.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licence: GPL-3.0-or-later" src="https://img.shields.io/badge/licence-GPL--3.0--or--later-e2456e"></a>
   <a href="https://simplyluma.com"><img alt="Made for Luma" src="https://img.shields.io/badge/made%20for-Luma-ff9a5c"></a>
-  <img alt="Platform: x86_64 Flatpak" src="https://img.shields.io/badge/flatpak-x86__64-555">
+  <img alt="Platform: x86_64 and aarch64 Flatpak" src="https://img.shields.io/badge/flatpak-x86__64%20%7C%20aarch64-555">
 </p>
 
 # Earshot
@@ -74,11 +74,13 @@ and a TV (it's on Luma's TV home, driven by the remote), and keeps playing with 
 
 ## Install
 
-Earshot is headed for **Depot**, Luma's app store. Until it's listed, you can build it yourself.
+Earshot is headed for **Depot**, Luma's app store. Until it's listed, download the bundle for your device from the
+[latest release](https://github.com/chartmann1590/earshot/releases/latest) (`x86_64` for computers, `aarch64` for phones
+and tablets), or build it yourself.
 
 ## Build
 
-You need the Luma SDK on `x86_64` (on Luma, or any Linux with Flatpak):
+You need the Luma SDK on `x86_64` or `aarch64` (on Luma, or any Linux with Flatpak):
 
 ```sh
 flatpak remote-add --if-not-exists luma https://dl.simplyluma.com/luma.flatpakrepo
