@@ -28,6 +28,8 @@ from luma_appkit import (  # noqa: E402
 from luma_appkit.action_bubble import FloatingMenu, MenuItem  # noqa: E402
 
 from . import net, notes, opml  # noqa: E402
+from .hsbilling import Billing  # noqa: E402
+from .paywall import Paywall, badge  # noqa: E402
 from .player import Player  # noqa: E402
 from .store import Store  # noqa: E402
 from .widgets import (  # noqa: E402
@@ -37,10 +39,18 @@ from .widgets import (  # noqa: E402
 
 APP_ID = "com.charleshartmann.Earshot"
 APP_NAME = "Earshot"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PLACES = (("fresh", "New episodes", "inbox"), ("queue", "Up next", "list-ordered"),
           ("downloads", "Downloads", "download"), ("shows", "Shows", "library"), ("discover", "Discover", "compass"))
 SAVE_EVERY = 10.0
+PLUS = "Earshot Plus"
+PLUS_PRODUCTS = ("earshot_lifetime", "earshot_plus:yearly", "earshot_plus:monthly")  # best first
+PLUS_FEATURES = (
+    ("volume-2", "Voice boost", "Quiet voices lifted and loud ones tamed, so every show sounds clear."),
+    ("rotate-cw", "Skip intros and outros", "Set it once per show and the theme music is skipped for you."),
+    ("download", "Automatic downloads", "New episodes from the shows you choose are ready offline."),
+    ("chart-column", "Listening stats", "How much you listen, your top shows, and the time speed saved you."),
+)
 SLEEP_CHOICES = ((0, "Off"), (5, "5 minutes"), (15, "15 minutes"), (30, "30 minutes"), (45, "45 minutes"),
                  (60, "1 hour"), (-1, "End of episode"), (-2, "End of chapter"))
 
@@ -53,6 +63,9 @@ class Window(AppWindow):
     def __init__(self, app):
         self.app_ref = app
         self.store = Store(os.path.join(data_dir(), "library.sqlite3"))
+        self.billing = Billing("earshot", PLUS_PRODUCTS, os.path.join(data_dir(), "license.json"))
+        self._listen_mark = None                # (monotonic time, position) of the last listening tick
+        self._listen_pending: dict = {}         # podcast url → [seconds, saved] not yet written
         self.pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="earshot")
         self.art: dict[str, str] = {}           # image url → cached path ("" while fetching)
         self._art_waiters: dict[str, list] = {}
@@ -88,6 +101,12 @@ class Window(AppWindow):
                 Command("play.now", "Now playing", self.open_now, icon="headphones", shortcut=("Ctrl", "L"),
                         enabled=lambda: self.current is not None),
                 Command("play.sleep", "Sleep timer…", self.ask_sleep, icon="moon", enabled=lambda: self.current is not None),
+                Command("play.boost", "Voice boost", lambda: self.set_voice_boost(not self.voice_boost_on()),
+                        icon="volume-2"),
+            )),
+            CommandGroup(PLUS, (
+                Command("plus.open", f"{PLUS}…", self.open_plus, icon="sparkles"),
+                Command("plus.stats", "Listening stats", self.open_stats, icon="chart-column"),
             )),
             CommandGroup("Shows", (
                 Command("shows.refresh", "Refresh", self.refresh_all, icon="refresh-cw", shortcut=("Ctrl", "R")),
@@ -141,6 +160,11 @@ class Window(AppWindow):
         self.player.on_eos = self._player_eos
         self.player.on_error = self._player_error
         self.player.set_volume(float(self.store.get("volume") or 1.0))
+        self.player.voice_boost = self.voice_boost_on()
+        self.paywall = Paywall(self, self.billing, PLUS, PLUS_FEATURES, open_uri=self.open_uri,
+                               toast=lambda t, k="done": self.toast(t, k), changed=self._plus_changed)
+        if self.billing.needs_revalidation():
+            threading.Thread(target=self.billing.revalidate, daemon=True).start()
         self.mpris = None
         try:
             from .mpris import Mpris
@@ -228,6 +252,100 @@ class Window(AppWindow):
             if path:
                 w(path) if callable(w) and not isinstance(w, Art) else w.set_path(path)
 
+    # ---------------------------------------------------------------- Earshot Plus
+    @property
+    def plus(self) -> bool:
+        return self.billing.owns()
+
+    def open_uri(self, url: str):
+        Gtk.UriLauncher.new(url).launch(self, None, None, None)
+
+    def open_plus(self):
+        self.center.grow("plus", self.paywall.panel, wide=True)
+
+    def need_plus(self, what: str) -> bool:
+        """True when Plus is owned; otherwise opens the upgrade panel (once) and returns False."""
+        if self.plus:
+            return True
+        self.toast(f"{what} comes with {PLUS}", "done")
+        self.open_plus()
+        return False
+
+    def _plus_changed(self):
+        if not self.plus and self.player.voice_boost:
+            self.set_voice_boost(False, quiet=True)
+        self.show_bar(force=False)       # the upgrade panel stays open to say thank you
+        if self.trail.current.view in ("show", "now", "stats"):
+            self._show(self.trail.current)
+
+    def voice_boost_on(self) -> bool:
+        return bool(self.store.get("voice_boost")) and self.plus
+
+    def set_voice_boost(self, on: bool, quiet: bool = False):
+        if on and not self.need_plus("Voice boost"):
+            return
+        self.store.set("voice_boost", bool(on))
+        if self.player.set_voice_boost(on) and self.loaded and self.current is not None:
+            pos, playing = self.position(), self.player.wants_play
+            self._load(self.current, play=playing, position=pos)
+        if not quiet:
+            self.toast("Voice boost on" if on else "Voice boost off", "done")
+        b = self._now_widgets.get("boost")
+        if b is not None:
+            for c in ("raised",):
+                (b.add_css_class if on else b.remove_css_class)(c)
+
+    def show_options(self, url: str):
+        if not self.need_plus("Show settings"):
+            return
+        p = self.store.podcast(url) or {}
+        intro, outro, auto = int(p.get("skip_intro") or 0), int(p.get("skip_outro") or 0), bool(p.get("auto_download"))
+
+        def secs(n):
+            return "Off" if not n else (f"{n} s" if n < 60 else f"{n // 60} min" + (f" {n % 60} s" if n % 60 else ""))
+
+        def cycle(option, choices, cur):
+            nxt = choices[(choices.index(cur) + 1) % len(choices)] if cur in choices else choices[0]
+            self.store.set_show_option(url, option, nxt)
+            self.center.fold()
+            self.show_options(url)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(PanelHeading(p.get("title") or "This show"))
+        box.append(PanelRow("Skip the intro", icon="skip-forward", detail=secs(intro), closes=False,
+                            on_activate=lambda: cycle("skip_intro", (0, 15, 30, 45, 60, 90, 120), intro)))
+        box.append(PanelRow("Skip the outro", icon="skip-back", detail=secs(outro), closes=False,
+                            on_activate=lambda: cycle("skip_outro", (0, 15, 30, 60, 90, 120), outro)))
+        box.append(PanelRow("Download new episodes automatically", icon="download", toggle=auto,
+                            on_toggle=lambda on: self.store.set_show_option(url, "auto_download", 1 if on else 0)))
+        self.center.grow("show-options", box)
+
+    def open_stats(self):
+        if not self.need_plus("Listening stats"):
+            return
+        if self.trail.current.view != "stats":
+            self.open_page("stats", "Listening stats", None)
+
+    def _track_listening(self, seconds: float):
+        """Count listening between ticks: wall time, and the time speed saved (Earshot Plus stats are kept
+        for everyone, so they are all there the day someone upgrades)."""
+        now = time.monotonic()
+        mark, self._listen_mark = self._listen_mark, (now, seconds)
+        if mark is None or self.current is None or not self.player.playing:
+            return
+        wall, content = now - mark[0], seconds - mark[1]
+        if not (0 < wall < 5) or not (0 < content < 20):
+            return  # a seek or a pause, not listening
+        pend = self._listen_pending.setdefault(self.current.get("podcast") or "", [0.0, 0.0])
+        pend[0] += wall
+        pend[1] += max(0.0, content - wall)
+
+    def _flush_listening(self):
+        for url, (wall, saved) in self._listen_pending.items():
+            if url and self.store.subscribed(url):
+                self.store.add_listening(url, wall, saved)
+        self._listen_pending = {}
+
     def skip_back(self) -> int:
         return int(self.store.get("skip_back") or 15)
 
@@ -247,7 +365,8 @@ class Window(AppWindow):
     def _show(self, place: Place):
         builders = {"fresh": self._page_fresh, "queue": self._page_queue, "downloads": self._page_downloads,
                     "shows": self._page_shows, "discover": self._page_discover, "show": self._page_show,
-                    "episode": self._page_episode, "now": self._page_now, "search": self._page_search}
+                    "episode": self._page_episode, "now": self._page_now, "search": self._page_search,
+                    "stats": self._page_stats}
         try:
             page = builders[place.view](place)
         except Exception as ex:
@@ -263,7 +382,7 @@ class Window(AppWindow):
         if place.view != "now":
             self._now_widgets = {}
         self._select_rows()
-        self.show_bar()
+        self.show_bar(force=not getattr(self, "_quiet", False))
         self.title_island.set_title(place.title, "")
 
     def _tile(self) -> int:
@@ -356,7 +475,14 @@ class Window(AppWindow):
             self.search(text)
 
     # ================================================================ the bar
-    def show_bar(self):
+    def show_bar(self, force: bool = True):
+        """Rebuild the bar. A background update (force=False) never folds a panel someone has open: it waits
+        until the panel closes."""
+        if not force and self.center.grown is not None:
+            if not getattr(self, "_bar_pending", False):
+                self._bar_pending = True
+                GLib.timeout_add(400, self._bar_when_folded)
+            return
         view = self.trail.current.view
         items = []
         if view == "fresh" and self.store.counts()["fresh"]:
@@ -384,10 +510,19 @@ class Window(AppWindow):
         more = [BarAction("link", "Add a show by address…", on_activate=self.ask_address),
                 BarAction("upload", "Import subscriptions…", on_activate=self.import_opml),
                 BarAction("download", "Export subscriptions…", on_activate=self.export_opml),
-                BarAction("moon", "Sleep timer…", on_activate=self.ask_sleep)]
+                BarAction("moon", "Sleep timer…", on_activate=self.ask_sleep),
+                BarAction("chart-column", "Listening stats", on_activate=self.open_stats),
+                BarAction("sparkles", f"{PLUS}…", on_activate=self.open_plus)]
         head = self.mini if self.current is not None and view != "now" else None
         self.center.show_bar(items, more=more, head=head, fill=True, head_inset=False)
         self.search_item = next((i for i in items if isinstance(i, BarSearch)), None)
+
+    def _bar_when_folded(self):
+        if self.center.grown is not None:
+            return True
+        self._bar_pending = False
+        self.show_bar()
+        return False
 
     def focus_search(self):
         if self.search_item is not None:
@@ -400,6 +535,15 @@ class Window(AppWindow):
 
     def _settings_panel(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(PanelHeading(PLUS))
+        if self.plus:
+            box.append(PanelRow(f"{PLUS} is on", icon="sparkles", detail="Manage", on_activate=self.open_plus))
+        else:
+            box.append(PanelRow(f"Get {PLUS}", icon="sparkles", subtitle="Voice boost, skips, auto-downloads and stats",
+                                on_activate=self.open_plus))
+        box.append(PanelRow("Voice boost", icon="volume-2", toggle=self.voice_boost_on(),
+                            on_toggle=lambda on: self.set_voice_boost(on)))
+        box.append(PanelRow("Listening stats", icon="chart-column", on_activate=self.open_stats))
         box.append(PanelHeading("Playback"))
         box.append(PanelRow("Play the next episode in Up next", icon="list-ordered",
                             toggle=bool(self.store.get("autoplay_next")),
@@ -726,6 +870,10 @@ class Window(AppWindow):
         if followed:
             keys.append(TextButton("Following", icon="check", style="raised", on_click=lambda: self.ask_unfollow(url)))
             keys.append(TextButton("Speed", icon="gauge", on_click=lambda: self.ask_show_speed(url)))
+            opts = TextButton("Skips & downloads", icon="settings", on_click=lambda: self.show_options(url))
+            keys.append(opts)
+            if not self.plus:
+                keys.append(badge())
         else:
             keys.append(TextButton("Follow", icon="plus", style="fill", on_click=lambda: self.follow(url)))
         info.append(keys)
@@ -917,10 +1065,13 @@ class Window(AppWindow):
         sleep = TextButton(self._sleep_words(), icon="moon", style="raised" if self.sleep_mode else "plain",
                            on_click=self.ask_sleep)
         extras.append(sleep)
+        boost = TextButton("Voice boost", icon="volume-2", style="raised" if self.voice_boost_on() else "plain",
+                           on_click=lambda: self.set_voice_boost(not self.voice_boost_on()))
+        extras.append(boost)
         extras.append(TextButton("Up next", icon="list-ordered", on_click=lambda: self.go("queue")))
         extras.append(TextButton("Notes", icon="file-text", on_click=lambda: self.open_page("episode", ep["title"], ep)))
         col.append(extras)
-        self._now_widgets = {"transport": transport, "scrub": scrub, "chapter": chapter, "sleep": sleep}
+        self._now_widgets = {"transport": transport, "scrub": scrub, "chapter": chapter, "sleep": sleep, "boost": boost}
         content = [col]
         if ep.get("chapters"):
             content.append(heading("Chapters"))
@@ -933,6 +1084,65 @@ class Window(AppWindow):
         page = self.page(place, content, wide=620)
         transport.attach_shortcuts(page)  # Space, ← and → while you're on Now playing
         return page
+
+    def _page_stats(self, place):
+        if not self.plus:
+            return EmptyState(f"Listening stats come with {PLUS}", "See how much you listen, your top shows, and the "
+                              "time your speed settings save you.", "lumaui-chart-column-symbolic",
+                              primary=(f"Get {PLUS}", self.open_plus))
+        self._flush_listening()
+        week = time.strftime("%Y-%m-%d", time.localtime(time.time() - 6 * 86400))
+        w, total = self.store.stats(week), self.store.stats()
+
+        def hours(s):
+            s = int(s)
+            return f"{s // 3600} h {s % 3600 // 60} min" if s >= 3600 else f"{s // 60} min"
+
+        tiles = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1, max_children_per_line=4,
+                            column_spacing=10, row_spacing=10, homogeneous=True)
+        for value, label in ((hours(w["seconds"]), "Listened this week"), (hours(w["saved"]), "Saved by speed this week"),
+                             (hours(total["seconds"]), "Listened in all"), (str(total["finished"]), "Episodes finished")):
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            card.add_css_class("earshot-stat")
+            v = Gtk.Label(label=value, xalign=0)
+            v.add_css_class("earshot-stat-value")
+            card.append(v)
+            card.append(TypeLabel(label, role="caption"))
+            tiles.append(card)
+        content = [tiles]
+        # the last seven days as bars
+        days = dict(w["days"])
+        top = max([s for _d, s in w["days"]] + [1])
+        bars = Gtk.Box(spacing=8, homogeneous=True, margin_top=8)
+        for i in range(6, -1, -1):
+            t = time.localtime(time.time() - i * 86400)
+            key = time.strftime("%Y-%m-%d", t)
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            from luma_appkit import ProgressLine
+            line = ProgressLine(days.get(key, 0) / top, label=f"{time.strftime('%A', t)}: {hours(days.get(key, 0))}")
+            col.append(line)
+            col.append(TypeLabel(time.strftime("%a", t), role="caption"))
+            bars.append(col)
+        content += [heading("This week"), bars]
+        if total["shows"]:
+            content.append(heading("Top shows"))
+            rows = []
+            best = total["shows"][0]["seconds"] or 1
+            for s in total["shows"]:
+                row = Gtk.Box(spacing=12, margin_top=6, margin_bottom=6)
+                art = Art(s["title"], 40)
+                self.art_for(s.get("image") or "", art)
+                row.append(art)
+                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True, valign=Gtk.Align.CENTER)
+                col.append(caption(f"{s['title']} · {hours(s['seconds'])}"))
+                from luma_appkit import ProgressLine
+                col.append(ProgressLine(s["seconds"] / best, label=s["title"]))
+                row.append(col)
+                rows.append(row)
+            content.append(episode_list(rows))
+        else:
+            content.append(TypeLabel("Listen to something and your stats start here.", role="caption", wrap=True))
+        return self.page(place, content, meta=["Last 7 days and all time"])
 
     def _sleep_words(self):
         if self.sleep_mode == -1:
@@ -1042,6 +1252,10 @@ class Window(AppWindow):
                 self.store.mark_played(known["id"], False)
                 known["position"] = 0
         start = position if position is not None else (0 if known.get("played") else float(known.get("position") or 0))
+        if position is None and self.plus:
+            intro = int((self.store.podcast(known.get("podcast") or "") or {}).get("skip_intro") or 0)
+            if intro and start < intro:
+                start = float(intro)   # skip the intro
         self._load(known, play=True, position=start)
         self._fetch_chapters(known)
         self._changed()
@@ -1129,6 +1343,7 @@ class Window(AppWindow):
         pos = self.position() if seconds is None else seconds
         if pos <= 0 and not self.loaded:
             return
+        self._flush_listening()
         done = self.store.set_position(self.current["id"], pos, self.player.duration or None)
         self.current["position"] = pos
         self._last_save = time.monotonic()
@@ -1152,6 +1367,13 @@ class Window(AppWindow):
         self._refresh_rows_playing()
 
     def _player_position(self, seconds: float):
+        self._track_listening(seconds)
+        if self.plus and self.current is not None:
+            p = self.store.podcast(self.current.get("podcast") or "") or {}
+            outro, dur = int(p.get("skip_outro") or 0), self.player.duration
+            if outro and dur > outro * 2 and seconds >= dur - outro:
+                self._player_eos()   # skip the outro: count it as finished and move on
+                return
         t = self._now_widgets.get("transport")
         if t is not None:
             t.set_position(seconds)
@@ -1232,7 +1454,11 @@ class Window(AppWindow):
     def _rebuild_now(self):
         self._rebuild_pending = False
         adj = self._scroll_value()
-        self._show(self.trail.current)
+        self._quiet = True               # a background refresh of the page: don't fold an open panel
+        try:
+            self._show(self.trail.current)
+        finally:
+            self._quiet = False
         GLib.idle_add(lambda: (self._set_scroll(adj), False)[1])
         return False
 
@@ -1624,7 +1850,7 @@ class Window(AppWindow):
     def _refresh(self, shows, quiet):
         shows = [p for p in shows if p]
         self.refreshing = True
-        self.show_bar()
+        self.show_bar(force=False)
         pending = [len(shows)]
         fresh_all: list[str] = []
         failures = [0]
@@ -1657,6 +1883,11 @@ class Window(AppWindow):
             n = len(fresh_all)
             if n:
                 self._notify_new(fresh_all)
+                if self.plus:
+                    for eid in fresh_all:
+                        ep = self.store.episode(eid)
+                        if ep and (self.store.podcast(ep["podcast"]) or {}).get("auto_download") and not ep.get("file"):
+                            self.download(ep)
             if not quiet or n:
                 msg = f"{n} new episode" + ("" if n == 1 else "s") if n else "No new episodes"
                 if failures[0]:

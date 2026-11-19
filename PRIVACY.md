@@ -17,6 +17,11 @@ removes them.
 - **The Apple Podcasts directory**, only when you open Discover or search. It receives the words you search
   for, the chart you're looking at and your region (taken from your device's language settings). It does not
   receive anything about the shows you follow or what you listen to.
+- **Earshot Plus, only if you buy or restore it.** The email you type goes to the Hartmann Studios license
+  server and to Stripe, which runs the checkout in your browser and sends your receipt. The license server keeps
+  your email and what you bought so you can restore it on another device; Stripe keeps your payment details
+  under [its own privacy policy](https://stripe.com/privacy). Earshot itself never sees your card. Your license is
+  checked again now and then so a cancelled subscription ends.
 
 Nothing else. Earshot sends no usage data, crash reports or identifiers anywhere.
 

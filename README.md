@@ -56,7 +56,20 @@ and a TV (it's on Luma's TV home, driven by the remote), and keeps playing with 
 - **Downloads** for listening without a connection; finished downloads clean themselves up.
 - **Media keys, headphone buttons and the lock screen** control playback (MPRIS).
 - **OPML** import and export, so you can bring your shows from any podcast app and take them anywhere.
-- No account, no tracking ([privacy policy](PRIVACY.md)).
+- No account, no ads, no tracking ([privacy policy](PRIVACY.md)).
+
+### Earshot Plus
+
+Everything above is free. **Earshot Plus** is an optional purchase that supports development and adds:
+
+- **Voice boost**: quiet voices lifted and loud ones tamed.
+- **Skip intros and outros**, set once per show.
+- **Automatic downloads** of new episodes from the shows you choose.
+- **Listening stats**: how much you listen, your top shows, and the time speed saved you.
+
+It's a monthly or yearly subscription (the yearly one starts with a free week) or a one-time unlock, paid through
+Stripe in your browser, with prices shown in the app. Cancel any time from the same panel. Earshot is open
+source: the Plus code is GPL too.
 
 ## Keyboard
 

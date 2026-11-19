@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0 (2026-11-19)
+
+- Earshot Plus, an optional purchase through Stripe: voice boost, skip intros and outros per show, automatic
+  downloads, and listening stats. Nothing that was free before costs money now.
+- Computer, tablet, phone and TV screenshots; on Luma's TV home.
+
 ## 1.0.0 (2026-11-19)
 
 The first release.

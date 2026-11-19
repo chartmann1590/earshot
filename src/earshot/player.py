@@ -39,9 +39,8 @@ class Player:
             self.pipe.set_property("flags", (int(flags) & ~0x1 & ~0x4) | 0x2)  # -video -text +audio
         except (TypeError, ValueError):
             pass
-        tempo = Gst.ElementFactory.make("scaletempo", "tempo")
-        if tempo is not None:
-            self.pipe.set_property("audio-filter", tempo)
+        self.voice_boost = False
+        self._set_filters()
         sink = os.environ.get("EARSHOT_AUDIO_SINK")
         if sink:
             element = Gst.ElementFactory.make(sink, "sink")
@@ -62,9 +61,48 @@ class Player:
         self._tick = 0
         self._last_pos = 0.0
 
+    def _set_filters(self):
+        """The audio filter chain: [voice boost →] pitch-correct speed. Only changed while stopped (NULL)."""
+        tempo = Gst.ElementFactory.make("scaletempo", None)
+        if not self.voice_boost or tempo is None:
+            if tempo is not None:
+                self.pipe.set_property("audio-filter", tempo)
+            return
+        bin_ = Gst.Bin.new("earshot-filters")
+        # Voice boost: a gentle compressor lifts quiet voices and tames loud ones, then a little gain brings
+        # the whole thing up to a comfortable level without clipping (Earshot Plus).
+        convert = Gst.ElementFactory.make("audioconvert", None)
+        comp = Gst.ElementFactory.make("audiodynamic", None)
+        amp = Gst.ElementFactory.make("audioamplify", None)
+        if None in (convert, comp, amp):
+            self.pipe.set_property("audio-filter", tempo)
+            return
+        comp.set_property("characteristics", "soft-knee")
+        comp.set_property("mode", "compressor")
+        comp.set_property("threshold", 0.18)
+        comp.set_property("ratio", 0.35)
+        amp.set_property("amplification", 1.8)
+        for e in (convert, comp, amp, tempo):
+            bin_.add(e)
+        convert.link(comp)
+        comp.link(amp)
+        amp.link(tempo)
+        bin_.add_pad(Gst.GhostPad.new("sink", convert.get_static_pad("sink")))
+        bin_.add_pad(Gst.GhostPad.new("src", tempo.get_static_pad("src")))
+        self.pipe.set_property("audio-filter", bin_)
+
+    def set_voice_boost(self, on: bool) -> bool:
+        """Turn voice boost on or off. Returns True when the caller must reload to hear it (it was playing)."""
+        on = bool(on)
+        if on == self.voice_boost:
+            return False
+        self.voice_boost = on
+        return bool(self.uri)
+
     # ---------------------------------------------------------------- control
     def load(self, uri: str, *, position: float = 0.0, play: bool = True, duration: float = 0.0) -> None:
         self.pipe.set_state(Gst.State.NULL)
+        self._set_filters()
         self.uri, self.duration, self._ready = uri, max(0.0, duration), False
         self._last_pos = max(0.0, position)
         self._pending_seek = position if position > 1 else None

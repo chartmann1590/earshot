@@ -28,7 +28,12 @@ CREATE INDEX IF NOT EXISTS episodes_podcast ON episodes(podcast, published DESC)
 CREATE INDEX IF NOT EXISTS episodes_new ON episodes(new, published DESC);
 CREATE TABLE IF NOT EXISTS queue (id TEXT PRIMARY KEY REFERENCES episodes(id) ON DELETE CASCADE, pos REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS listening (day TEXT NOT NULL, podcast TEXT NOT NULL, seconds REAL DEFAULT 0,
+  saved REAL DEFAULT 0, PRIMARY KEY (day, podcast));
 """
+# columns added after 1.0 (Earshot Plus): ALTER TABLE adds them to existing libraries
+MIGRATIONS = (("podcasts", "skip_intro", "INTEGER DEFAULT 0"), ("podcasts", "skip_outro", "INTEGER DEFAULT 0"),
+              ("podcasts", "auto_download", "INTEGER DEFAULT 0"))
 
 DEFAULTS = {
     "speed": 1.0,
@@ -39,6 +44,7 @@ DEFAULTS = {
     "refresh_minutes": 60,
     "current": "",
     "volume": 1.0,
+    "voice_boost": False,
 }
 PLAYED_MARGIN = 30.0   # within this many seconds of the end counts as played
 
@@ -68,6 +74,10 @@ class Store:
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.execute("PRAGMA journal_mode = WAL") if path != ":memory:" else None
         self.db.executescript(SCHEMA)
+        for table, column, decl in MIGRATIONS:
+            have = {r[1] for r in self.db.execute(f"PRAGMA table_info({table})")}
+            if column not in have:
+                self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
         self.db.commit()
 
     def close(self):
@@ -167,6 +177,40 @@ class Store:
     def set_speed(self, url: str, speed: float | None) -> None:
         self.db.execute("UPDATE podcasts SET speed = ? WHERE url = ?", (speed, url))
         self.db.commit()
+
+    def set_show_option(self, url: str, option: str, value: int) -> None:
+        """Earshot Plus per-show options: skip_intro, skip_outro (seconds) and auto_download (0/1)."""
+        if option not in ("skip_intro", "skip_outro", "auto_download"):
+            raise ValueError(option)
+        self.db.execute(f"UPDATE podcasts SET {option} = ? WHERE url = ?", (int(value), url))
+        self.db.commit()
+
+    # ---------------------------------------------------------------- listening stats (Earshot Plus)
+    def add_listening(self, podcast: str, seconds: float, saved: float, day: str | None = None) -> None:
+        """Count `seconds` of wall-clock listening to `podcast` today, of which speed saved `saved`."""
+        if seconds <= 0:
+            return
+        day = day or time.strftime("%Y-%m-%d")
+        self.db.execute("""INSERT INTO listening (day, podcast, seconds, saved) VALUES (?, ?, ?, ?)
+                           ON CONFLICT(day, podcast) DO UPDATE SET seconds = seconds + excluded.seconds,
+                           saved = saved + excluded.saved""", (day, podcast, seconds, max(0.0, saved)))
+        self.db.commit()
+
+    def stats(self, since: str = "0000-00-00") -> dict:
+        """Totals since a day (YYYY-MM-DD): seconds, saved, finished episodes, and shows by time."""
+        tot = self.db.execute("SELECT COALESCE(SUM(seconds), 0), COALESCE(SUM(saved), 0) FROM listening WHERE day >= ?",
+                              (since,)).fetchone()
+        since_t = time.mktime(time.strptime(since, "%Y-%m-%d")) if since > "1970" else 0
+        finished = self.db.execute("SELECT COUNT(*) FROM episodes WHERE played = 1 AND played_at >= ?",
+                                   (since_t,)).fetchone()[0]
+        shows = self.db.execute("""SELECT l.podcast, COALESCE(p.title, l.podcast) AS title, p.image AS image,
+                                   SUM(l.seconds) AS seconds FROM listening l LEFT JOIN podcasts p ON p.url = l.podcast
+                                   WHERE l.day >= ? GROUP BY l.podcast ORDER BY seconds DESC LIMIT 10""",
+                                (since,)).fetchall()
+        days = self.db.execute("SELECT day, SUM(seconds) FROM listening WHERE day >= ? GROUP BY day ORDER BY day",
+                               (since,)).fetchall()
+        return {"seconds": tot[0], "saved": tot[1], "finished": finished,
+                "shows": [dict(r) for r in shows], "days": [(d, s) for d, s in days]}
 
     def move_feed(self, old: str, new: str) -> bool:
         """A show moved (itunes:new-feed-url or a permanent redirect): keep its episodes and history."""

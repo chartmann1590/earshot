@@ -19,6 +19,7 @@ TMP = tempfile.mkdtemp()
 os.environ["XDG_DATA_HOME"] = os.path.join(TMP, "data")
 os.environ["XDG_CACHE_HOME"] = os.path.join(TMP, "cache")
 os.environ["EARSHOT_AUDIO_SINK"] = "fakesink"
+os.environ["HS_BILLING_URL"] = "http://127.0.0.1:1"   # no store in tests: the panel must cope
 
 import gi  # noqa: E402
 
@@ -175,12 +176,73 @@ def run(w):
         pump(0.2)
         w.center.fold()
 
+    def plus():
+        # locked: an extra opens the upgrade panel instead of turning on
+        assert not w.plus
+        w.set_voice_boost(True)
+        pump(0.5)
+        assert not w.voice_boost_on() and w.center.grown == "plus"
+        ok = wait_for(lambda: w.paywall.catalog_error != "", 30)   # the store can't be reached: it says so
+        assert ok, (w.center.grown, w.paywall.catalog, w.paywall.catalog_error, w.paywall.box is not None,
+                    __import__("earshot.hsbilling", fromlist=["x"]).BASE_URL)
+        w.center.fold()
+        w.open_stats()
+        assert w.trail.current.view != "stats"
+        # owned (as the license server would answer after a paid checkout)
+        w.billing._store({"email": "t@example.com", "entitlements": ["earshot_plus:yearly"], "licenseToken": "",
+                          "revalidateAfter": 0})
+        pump(0.3)
+        assert w.plus
+        e2 = w.store.episode(eps["Episode 2"]["id"])
+        w.play(e2)
+        assert wait_for(lambda: w.player.playing)
+        w.set_voice_boost(True)
+        assert w.voice_boost_on() and w.player.voice_boost
+        assert wait_for(lambda: w.player.playing), "voice boost reload stopped playback"
+        flt = w.player.pipe.get_property("audio-filter")
+        assert flt is not None and flt.get_name() == "earshot-filters"
+        w.set_voice_boost(False)
+        assert not w.player.voice_boost
+        # listening is counted and shows up in stats
+        pump(3)
+        w.pause()
+        pump(0.3)
+        st = w.store.stats()
+        assert st["seconds"] > 1, st
+        w.open_stats()
+        pump(0.3)
+        assert w.trail.current.view == "stats"
+        # skip the intro: a fresh start begins at the intro's end
+        w.store.set_show_option(url, "skip_intro", 15)
+        w.store.mark_played(e2["id"], False)
+        w.store.set_position(e2["id"], 0)
+        w.player.stop()
+        w.loaded = False
+        w.play(w.store.episode(e2["id"]))
+        assert wait_for(lambda: w.player.playing)
+        assert w.position() >= 14, w.position()
+        # skip the outro: the last 15 s of a 30 s episode count as finished
+        w.store.set_show_option(url, "skip_outro", 10)
+        w.seek(18)
+        assert wait_for(lambda: w.store.episode(e2["id"])["played"] == 1, 10), "outro wasn't skipped"
+        w.show_options(url)
+        pump(0.2)
+        assert w.center.grown == "show-options"
+        w.center.fold()
+        # the owned panel thanks you and offers to check again (no subscription page for a one-time unlock)
+        w.open_plus()
+        pump(0.3)
+        w.center.fold()
+        w.billing.forget()
+        pump(0.2)
+        assert not w.plus and not w.player.voice_boost
+
     def unfollow():
         w._unfollow(url, quiet=True)
         assert w.store.counts()["shows"] == 0 and w.current is None
 
     for name, fn in (("pages", pages), ("queue and playback", queue_and_play), ("speed and sleep", speed_and_sleep),
-                     ("show-note times", notes_links), ("menus and OPML", menus_and_opml), ("unfollow", unfollow)):
+                     ("show-note times", notes_links), ("menus and OPML", menus_and_opml), ("Earshot Plus", plus), ("unfollow", unfollow)):
         check(name, fn)
 
 

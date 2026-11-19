@@ -54,6 +54,75 @@ commit the manifest pins, installed and tested on each architecture:
 6. **Review.** Luma builds the manifest, validates the metainfo and desktop file, runs
    `flatpak-builder-lint`, computes permissions, then a person reviews the first release.
 
+## Billing (Earshot Plus)
+
+The app is free; **Earshot Plus** is an optional purchase through the shared Hartmann Studios license server (the
+Cloudflare Worker `livecaptionn-premium`, `/v2` API) and Stripe Checkout, the same system as the studio's direct
+Android builds. No Stripe key is in the app.
+
+**For the listing (Luma review 3.6):** the description already says the app is free with an optional purchase,
+and names the extras. In Connect, mark the app as offering in-app purchases if the form asks. Prices and trial
+lengths are read live from the license server, never hard-coded.
+
+**Sign-in declaration (2.4):** `none`. Buying asks for an email for the receipt and license; it does not create
+an account, and nothing in the app needs one.
+
+**What the license server needs before purchases work:** an app entry `earshot` in its catalog with three Stripe
+prices. Until then the panel says "Purchases aren't open for this app yet" and everything else works.
+
+| Product key | Label | Stripe mode | Price |
+| --- | --- | --- | --- |
+| `earshot_plus:monthly` | Earshot Plus (Monthly) | subscription | $1.99 / month |
+| `earshot_plus:yearly` | Earshot Plus (Yearly) | subscription | $14.99 / year, 7-day free trial |
+| `earshot_lifetime` | Earshot Plus (Lifetime) | payment | $29.99 once |
+
+The catalog entry, in the shape the server already serves for Nightsay (`GET /v2/catalog?app=nightsay`):
+
+```json
+{
+  "app": "earshot",
+  "name": "Earshot",
+  "products": {
+    "earshot_plus:monthly": {
+      "mode": "subscription",
+      "trial_days": 0,
+      "implies": [],
+      "display": {
+        "label": "Earshot Plus (Monthly)",
+        "amount": 199,
+        "interval": "month",
+        "consumable": false
+      }
+    },
+    "earshot_plus:yearly": {
+      "mode": "subscription",
+      "trial_days": 7,
+      "implies": [],
+      "display": {
+        "label": "Earshot Plus (Yearly)",
+        "amount": 1499,
+        "interval": "year",
+        "consumable": false
+      }
+    },
+    "earshot_lifetime": {
+      "mode": "payment",
+      "trial_days": 0,
+      "implies": [],
+      "display": {
+        "label": "Earshot Plus (Lifetime)",
+        "amount": 2999,
+        "interval": null,
+        "consumable": false
+      }
+    }
+  }
+}
+```
+
+Checkout returns to the server's own `/v2/return` page; the app doesn't need a redirect. It reads the Checkout
+session id from the checkout address and asks `/v2/entitlement` until Stripe confirms the payment.
+
 ## Listing text (also in the metainfo)
 
 - **Name:** Earshot

@@ -21,6 +21,11 @@
       <li>Bring your shows from any other podcast app with OPML, and take them anywhere</li>
     </ul>
     <p>
+      Earshot is free, with no ads. Earshot Plus is an optional purchase (a monthly or yearly subscription, or a
+      one-time unlock, paid through Stripe) that adds voice boost, skipping intros and outros, automatic downloads
+      and listening stats. Everything above stays free.
+    </p>
+    <p>
       There is no account and no tracking. Earshot talks only to the shows you follow and, when you search or
       browse the charts, to the Apple Podcasts directory.
     </p>
@@ -90,6 +95,11 @@
     <value key="org.projectluma.ApplicationContract">0.2</value>
   </custom>
   <releases>
+    <release version="1.1.0" date="2026-11-19">
+      <description>
+        <p>Earshot Plus, an optional purchase: voice boost, skip intros and outros per show, automatic downloads and listening stats. Everything that was free stays free.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-11-19">
       <description>
         <p>The first release: discover, follow, Up next, downloads, chapters, speed, sleep timer and OPML.</p>
