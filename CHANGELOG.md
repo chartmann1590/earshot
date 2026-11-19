@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 — 2026-11-19
+
+- Add optional, product-scoped promotion codes to Lifetime checkout when enabled by the billing catalog.
+- Show the exact purchased or active plan; normal checkout and purchase restore remain available.
+
 ## 1.1.0 (2026-11-19)
 
 - Earshot Plus, an optional purchase through Stripe: voice boost, skip intros and outros per show, automatic
