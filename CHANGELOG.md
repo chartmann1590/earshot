@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 (2026-11-21)
+
+- The selected genre in Discover (Top shows, News, ...) was a blank white pill in dark mode: its text used a colour
+  that is nearly transparent there. It now reads in both light and dark.
+
 ## 1.2.1 (2026-11-19)
 
 - Combine the GitHub release checker with scoped lifetime promotion entry and exact purchased-plan labels.

@@ -9,7 +9,9 @@
 .earshot-badge { background: @luma_count_attention_bg; color: @luma_count_attention_ink; border-radius: 999px; padding: 1px 7px;
                  font-size: 11px; font-weight: 700; min-width: 12px; }
 .earshot-chip { border-radius: 999px; padding: 4px 12px; font-weight: 600; }
-.earshot-chip:checked { background: @luma_ink; color: @luma_island; }
+/* Selected chip: @luma_island is nearly transparent in dark mode, so its text vanished; the window colour is always the opposite of ink. */
+.earshot-chip:checked { background: @luma_ink; color: @window_bg_color; }
+.earshot-chip:checked label { color: @window_bg_color; }
 .earshot-show-title { font-size: 28px; font-weight: 750; letter-spacing: -0.02em; }
 .earshot-episode-heading { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
 .earshot-description, .earshot-notes { font-size: 14px; line-height: 1.55; }

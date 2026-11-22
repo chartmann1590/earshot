@@ -41,7 +41,7 @@ from .widgets import (  # noqa: E402
 
 APP_ID = "com.charleshartmann.Earshot"
 APP_NAME = "Earshot"
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 PLACES = (("fresh", "New episodes", "inbox"), ("queue", "Up next", "list-ordered"),
           ("downloads", "Downloads", "download"), ("shows", "Shows", "library"), ("discover", "Discover", "compass"))
 SAVE_EVERY = 10.0
